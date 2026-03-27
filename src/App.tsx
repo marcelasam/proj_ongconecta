@@ -255,18 +255,22 @@ export default function Home() {
                       px-6 md:px-16 py-4 bg-[rgba(248,249,245,0.92)] backdrop-blur-md
                       border-b border-emerald-200/30">
         <a href="#" className="flex items-center gap-3 no-underline">
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
-            style={{ background: GRADIENT_PRIMARY, boxShadow: "0 4px 14px rgba(25,193,158,0.35)" }}
-          >
-            🤲
-          </div>
+{/* logo */}
+          <img 
+            src="src/assets/images/aperto-de-mao-do-coracao.png" 
+            alt="Doações" 
+            className="w-8 h-8 object-contain" 
+          />
+
           <div>
-            <p className="font-lora font-bold text-[1.1rem] text-[#1a2e25] leading-tight">Mãos Solidárias</p>
+            <p className="font-lora font-bold text-[1.1rem] leading-tight">
+                  <span className="text-[#1a2e25]">Ong</span>
+                  <span className="text-[#19c19e]">Conecta</span>
+            </p>
             <p className="font-dm text-[0.65rem] text-[#6b8c7d] tracking-widest uppercase">Gestão de doações</p>
           </div>
         </a>
-
+{/* logo */}
         <ul className="hidden md:flex gap-10 list-none">
           {NAV_LINKS.map(({ label, anchor }) => (
             <li key={anchor}>
@@ -289,43 +293,43 @@ export default function Home() {
       <section id="hero" className="min-h-screen grid grid-cols-1 md:grid-cols-2 items-center
                                     px-6 md:px-16 pt-28 pb-16 relative overflow-hidden">
 
-        {/* Blobs decorativos com animação flutuante */}
-        <div className="blob-1 absolute rounded-full pointer-events-none z-0"
-             style={{ width: 600, height: 600, top: -100, right: -100, filter: "blur(80px)",
-                      background: "radial-gradient(circle, rgba(105,227,169,0.25), transparent 70%)" }} />
-        <div className="blob-2 absolute rounded-full pointer-events-none z-0"
-             style={{ width: 400, height: 400, bottom: -50, left: 200, filter: "blur(80px)",
-                      background: "radial-gradient(circle, rgba(157,247,181,0.2), transparent 70%)" }} />
-
         {/* Texto principal */}
         <div className="relative z-10 max-w-xl">
-          <div className="hero-badge inline-flex items-center gap-2 bg-emerald-100/50 border border-emerald-300/50
-                          text-[#2d4a3e] font-dm text-xs font-semibold tracking-widest uppercase
+          <div className="hero-badge inline-flex items-center gap-2 bg-emerald-100/50 border border-emerald-300/50 text-[#2d4a3e] font-dm text-xs font-semibold tracking-widest uppercase
                           px-4 py-1.5 rounded-full mb-7">
-            <span>🌱</span>
-            <span>ONG Mãos Solidárias — Manaus, AM</span>
+            <span>
+              <img 
+            src="src/assets/images/aperto-de-mao-do-coracao.png" 
+            alt="Doações" 
+            className="w-8 h-8 object-contain" 
+          />
+
+            </span>
+            <span>OngConecta — Manaus, AM</span>
           </div>
+          
+          <div>  
+            <h1 className="hero-title-anim font-lora font-bold text-[#1a2e25] leading-[1.18] mb-5"
+                style={{ fontSize: "clamp(2.4rem, 4vw, 3.6rem)" }}>
+              Cada doação,<br />
+              <em className="italic text-[#19c19e]">cada família,</em><br />
+              cada entrega.
+            </h1>
 
-          <h1 className="hero-title-anim font-lora font-bold text-[#1a2e25] leading-[1.18] mb-5"
-              style={{ fontSize: "clamp(2.4rem, 4vw, 3.6rem)" }}>
-            Cada doação,<br />
-            <em className="italic text-[#19c19e]">cada família,</em><br />
-            cada entrega.
-          </h1>
+            <p className="hero-desc-anim font-dm font-light text-[#3d5a4e] leading-[1.75] mb-10 max-w-md text-base">
+              Um sistema centralizado que transforma planilhas e mensagens em rastreabilidade real —
+              do recebimento da doação até a cesta nas mãos de quem precisa.
+            </p>
 
-          <p className="hero-desc-anim font-dm font-light text-[#3d5a4e] leading-[1.75] mb-10 max-w-md text-base">
-            Um sistema centralizado que transforma planilhas e mensagens em rastreabilidade real —
-            do recebimento da doação até a cesta nas mãos de quem precisa.
-          </p>
-
-          <div className="hero-ctas-anim flex flex-wrap gap-4">
-            <a href="#solucao" className={BTN_PRIMARY_CLS}
-               style={{ background: GRADIENT_PRIMARY, boxShadow: SHADOW_GREEN }}>
-              Ver o sistema →
-            </a>
-            <a href="#sobre" className={BTN_OUTLINE_DARK_CLS}>
-              Saiba mais
-            </a>
+            <div className="hero-ctas-anim flex flex-wrap gap-4">
+              <a href="#solucao" className={BTN_PRIMARY_CLS}
+                style={{ background: GRADIENT_PRIMARY, boxShadow: SHADOW_GREEN }}>
+                Ver o sistema →
+              </a>
+              <a href="#sobre" className={BTN_OUTLINE_DARK_CLS}>
+                Saiba mais
+              </a>
+            </div>
           </div>
         </div>
 
@@ -387,7 +391,7 @@ export default function Home() {
               Controle manual gera<br />injustiça e desperdício
             </h2>
             <p className="font-dm text-base text-[#3d5a4e] leading-[1.75] font-light mb-8">
-              A operação da ONG Mãos Solidárias cresceu, mas os processos ainda dependem de
+              A operação da OngConecta cresceu, mas os processos ainda dependem de
               planilhas e grupos de mensagem. Isso cria divergências de estoque, itens vencendo
               sem rotação e distribuição desigual entre famílias.
             </p>
@@ -491,10 +495,13 @@ export default function Home() {
       <footer className="bg-[#1a2e25] px-6 md:px-16 py-12
                          flex flex-col md:flex-row items-center justify-between gap-6 flex-wrap">
         <p className="font-lora font-bold text-base text-white">
-          🤲 Mãos <span className="text-emerald-300">Solidárias</span>
+          
+          🤲
+          
+           Ong <span className="text-emerald-300">Conecta</span>
         </p>
         <p className="font-dm text-xs text-white/35 text-center leading-relaxed">
-          © 2025 ONG Mãos Solidárias · Manaus, Amazonas<br />
+          © 2026 OngConecta · Manaus, Amazonas<br />
           Projeto acadêmico · Todos os direitos reservados
         </p>
         <ul className="flex gap-8 list-none">

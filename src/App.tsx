@@ -1,11 +1,14 @@
 import { useState, useEffect } from "react";
+import ControleEstoque from "./components/ControleEstoque";
 
 // ─── Tipagem ───────────────────────────────────────────────────────────────────
 
 type Priority = "Alta" | "Média";
+// NOVO: tipo para controlar qual tela está ativa
+type Tela = "landing" | "estoque";
 
 interface Stat       { value: string; label: string }
-interface Feature    { icon: string;  title: string; desc: string }
+interface Feature    { icon: string;  title: string; desc: string; rota?: Tela }
 interface Problem    { icon: string;  title: string; desc: string; accentBorder: string }
 interface FamilyCard { name: string;  cidade: string; descricao: string; prioridade: Priority; accentBar: string }
 
@@ -18,9 +21,10 @@ const STATS: Stat[] = [
   { value: "R$2M+",  label: "Recursos mobilizados"  },
 ];
 
+// MUDANÇA: adicionado `rota: "estoque"` apenas no card de Controle de Estoque
 const FEATURES: Feature[] = [
   { icon: "📥", title: "Registro de Doações",      desc: "Cadastre lotes de empresas e doações individuais com rastreabilidade completa de origem e data." },
-  { icon: "📦", title: "Controle de Estoque",       desc: "Gestão por lotes com data de validade, alertas automáticos e rotação FIFO para alimentos." },
+  { icon: "📦", title: "Controle de Estoque",       desc: "Gestão por lotes com data de validade, alertas automáticos e rotação FIFO para alimentos.", rota: "estoque" },
   { icon: "🎁", title: "Montagem de Kits",          desc: "Monte cestas e kits com fluxo de aprovação, garantindo padronização e controle de saídas." },
   { icon: "🚚", title: "Registro de Entregas",      desc: "Histórico completo por família com critérios de priorização e rastreabilidade de cada kit entregue." },
   { icon: "📊", title: "Dashboards Simples",        desc: "Visão geral do estoque, entregas e famílias atendidas. Exportação para relatórios de parceiros." },
@@ -40,7 +44,6 @@ const FAMILIES: FamilyCard[] = [
   { name: "Família Santos",   cidade: "Manaus, AM", descricao: "Recém-chegados, precisam de kit básico.",           prioridade: "Média", accentBar: "bg-emerald-400" },
 ];
 
-// Links da navegação com slug de âncora pré-calculado
 const NAV_LINKS = [
   { label: "Sobre",    anchor: "#sobre"    },
   { label: "Solução",  anchor: "#solucao"  },
@@ -50,25 +53,21 @@ const NAV_LINKS = [
 
 const FOOTER_LINKS = ["Privacidade", "Termos", "Contato"];
 
-// ─── Constantes de estilo reutilizadas ────────────────────────────────────────
+// ─── Constantes de estilo ─────────────────────────────────────────────────────
 
-// Gradiente primário da marca (verde teal → verde claro)
 const GRADIENT_PRIMARY = "linear-gradient(135deg, #19c19e, #69e3a9)";
 const SHADOW_GREEN     = "0 4px 18px rgba(25,193,158,0.4)";
 
-// Classes Tailwind compartilhadas entre botões primários
 const BTN_PRIMARY_CLS =
   "font-dm text-sm font-semibold text-white px-7 py-3 rounded-full no-underline inline-block transition-all hover:-translate-y-0.5";
 
 const BTN_OUTLINE_DARK_CLS =
   "font-dm text-sm font-semibold text-[#1a2e25] border-2 border-[#1a2e25] px-7 py-3 rounded-full no-underline transition-all hover:bg-[#1a2e25] hover:text-white hover:-translate-y-0.5";
 
-// Tamanho de título de seção com escala fluida via clamp
 const SECTION_TITLE_STYLE = { fontSize: "clamp(1.8rem, 2.5vw, 2.6rem)" };
 
 // ─── Subcomponentes ────────────────────────────────────────────────────────────
 
-/** Tag de seção com linha decorativa lateral esquerda */
 function SectionTag({ children }: { children: string }) {
   return (
     <div className="flex items-center gap-2 font-dm text-xs font-semibold tracking-[0.1em] uppercase text-[#19c19e] mb-4">
@@ -78,15 +77,25 @@ function SectionTag({ children }: { children: string }) {
   );
 }
 
-/** Cartão de feature na seção de solução — borda gradiente aparece no hover via pseudo-elemento */
-function FeatureCard({ feature, delayIndex }: { feature: Feature; delayIndex: number }) {
-  // Delay escalonado cria entrada em cascata por coluna (índice mod 3)
+// MUDANÇA: FeatureCard agora recebe onNavigate e exibe cursor/indicador quando tem rota
+function FeatureCard({
+  feature,
+  delayIndex,
+  onNavigate,
+}: {
+  feature: Feature;
+  delayIndex: number;
+  onNavigate: (rota: Tela) => void;
+}) {
   const staggerDelay = `${0.1 * (delayIndex % 3)}s`;
+  const temRota = !!feature.rota;
 
   return (
     <div
-      className="feature-card-hover relative bg-white/5 border border-emerald-300/15 rounded-2xl p-8
-                 overflow-hidden transition-all hover:bg-white/[0.08] hover:-translate-y-1.5 hover:border-emerald-300/35"
+      onClick={() => feature.rota && onNavigate(feature.rota)}
+      className={`feature-card-hover relative bg-white/5 border border-emerald-300/15 rounded-2xl p-8
+                 overflow-hidden transition-all hover:bg-white/[0.08] hover:-translate-y-1.5 hover:border-emerald-300/35
+                 ${temRota ? "cursor-pointer" : "cursor-default"}`}
       style={{ transitionDelay: staggerDelay }}
     >
       <div className="w-12 h-12 rounded-xl bg-emerald-300/10 border border-emerald-300/25
@@ -95,11 +104,17 @@ function FeatureCard({ feature, delayIndex }: { feature: Feature; delayIndex: nu
       </div>
       <p className="font-lora text-base font-semibold text-white mb-2">{feature.title}</p>
       <p className="font-dm text-sm text-white/50 leading-relaxed font-light">{feature.desc}</p>
+
+      {/* Indicador visual de que o card é clicável */}
+      {temRota && (
+        <p className="font-dm text-xs text-[#19c19e] mt-4 font-semibold tracking-wide">
+          Acessar módulo →
+        </p>
+      )}
     </div>
   );
 }
 
-/** Cartão de problema com borda lateral colorida indicando severidade */
 function ProblemCard({ problem }: { problem: Problem }) {
   return (
     <div className={`bg-white rounded-2xl px-5 py-4 border-l-4 ${problem.accentBorder}
@@ -114,7 +129,6 @@ function ProblemCard({ problem }: { problem: Problem }) {
   );
 }
 
-/** Cartão de família com badge de prioridade e barra colorida na borda inferior */
 function FamilyCardItem({ family }: { family: FamilyCard }) {
   const isHighPriority = family.prioridade === "Alta";
 
@@ -122,16 +136,12 @@ function FamilyCardItem({ family }: { family: FamilyCard }) {
     <div className="relative bg-white rounded-2xl p-7 overflow-hidden border border-[rgba(26,46,37,0.06)]
                     shadow-[0_6px_24px_rgba(26,46,37,0.07)] transition-all
                     hover:-translate-y-2 hover:shadow-[0_16px_40px_rgba(26,46,37,0.13)]">
-
-      {/* Barra inferior colorida: indicador visual de prioridade da família */}
       <div className={`absolute bottom-0 left-0 right-0 h-[3px] rounded-b-2xl ${family.accentBar}`} />
-
       <span className={`inline-flex items-center gap-1 font-dm text-xs font-bold tracking-widest uppercase
                         px-3 py-1 rounded-full mb-5
                         ${isHighPriority ? "bg-red-50 text-red-500" : "bg-emerald-50 text-[#2d4a3e]"}`}>
         {isHighPriority ? "🔴" : "🟢"} Prioridade {family.prioridade}
       </span>
-
       <p className="font-lora text-lg font-semibold text-[#1a2e25] mb-1">{family.name}</p>
       <p className="font-dm text-xs text-[#6b8c7d] mb-3">📍 {family.cidade}</p>
       <p className="font-dm text-sm text-[#3d5a4e] leading-relaxed border-t border-[rgba(26,46,37,0.07)] pt-3">
@@ -141,7 +151,6 @@ function FamilyCardItem({ family }: { family: FamilyCard }) {
   );
 }
 
-/** Mini-cartão flutuante reutilizável para a visual do hero */
 function HeroFloatCard({
   label, value, sub, className, style,
 }: {
@@ -162,8 +171,6 @@ function HeroFloatCard({
 }
 
 // ─── CSS global ───────────────────────────────────────────────────────────────
-// Separado do JSX pois contém: @import de fontes, keyframes de animação
-// e pseudo-elemento ::before (não suportados como utilitários Tailwind inline)
 
 const GLOBAL_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
@@ -173,11 +180,9 @@ const GLOBAL_STYLES = `
 
   html { scroll-behavior: smooth; }
 
-  /* Animação de entrada ao entrar na viewport */
   .fade-up         { opacity: 0; transform: translateY(40px); transition: opacity 0.8s ease, transform 0.8s ease; }
   .fade-up.visible { opacity: 1; transform: translateY(0); }
 
-  /* Blobs flutuantes do fundo do hero */
   @keyframes floatBlob {
     0%, 100% { transform: translate(0, 0) scale(1); }
     50%      { transform: translate(20px, -30px) scale(1.05); }
@@ -185,14 +190,12 @@ const GLOBAL_STYLES = `
   .blob-1 { animation: floatBlob 8s  ease-in-out infinite; }
   .blob-2 { animation: floatBlob 10s ease-in-out infinite reverse; }
 
-  /* Barra de progresso do cartão de estoque no hero */
   @keyframes growBar {
     from { width: 0; }
     to   { width: 73%; }
   }
   .progress-fill { animation: growBar 1.5s ease 1s both; width: 73%; }
 
-  /* Animações de entrada escalonadas do hero */
   @keyframes fadeInDown {
     from { opacity: 0; transform: translateY(-20px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -207,7 +210,6 @@ const GLOBAL_STYLES = `
   .hero-ctas-anim   { animation: fadeInUp   0.7s ease 0.3s   both; }
   .hero-visual-anim { animation: fadeInUp   0.9s ease 0.2s   both; }
 
-  /* Linha gradiente que aparece no topo do feature card ao hover (pseudo-elemento) */
   .feature-card-hover::before {
     content: '';
     position: absolute;
@@ -223,9 +225,15 @@ const GLOBAL_STYLES = `
 // ─── Componente principal ──────────────────────────────────────────────────────
 
 export default function Home() {
+  // NOVO: estado que controla qual tela exibir
+  const [tela, setTela] = useState<Tela>("landing");
   const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set());
 
-  // Observa elementos com [data-animate] e os marca como visíveis ao entrar na viewport
+  // Rola para o topo sempre que trocar de tela
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [tela]);
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -240,12 +248,61 @@ export default function Home() {
 
     document.querySelectorAll("[data-animate]").forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, []);
+  }, [tela]); // re-observa quando volta para a landing
 
-  // Retorna a classe de animação de fade-in para a seção informada
   const fadeIn = (sectionId: string) =>
     `fade-up ${visibleSections.has(sectionId) ? "visible" : ""}`;
 
+  // ── Se a tela ativa for "estoque", renderiza o módulo com nav própria ────────
+  if (tela === "estoque") {
+    return (
+      <>
+        <style>{GLOBAL_STYLES}</style>
+
+        {/* Barra de navegação da landing, com botão "Voltar" */}
+        <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between
+                        px-6 md:px-16 py-4 bg-[rgba(248,249,245,0.95)] backdrop-blur-md
+                        border-b border-emerald-200/30">
+          <a href="#" className="flex items-center gap-3 no-underline" onClick={() => setTela("landing")}>
+            <img
+              src="src/assets/images/aperto-de-mao-do-coracao.png"
+              alt="Doações"
+              className="w-8 h-8 object-contain"
+            />
+            <div>
+              <p className="font-lora font-bold text-[1.1rem] leading-tight">
+                <span className="text-[#1a2e25]">Ong</span>
+                <span className="text-[#19c19e]">Conecta</span>
+              </p>
+              <p className="font-dm text-[0.65rem] text-[#6b8c7d] tracking-widest uppercase">Gestão de doações</p>
+            </div>
+          </a>
+
+          {/* Breadcrumb simples */}
+          <p className="font-dm text-sm text-[#6b8c7d] hidden md:block">
+            Sistema&nbsp;<span className="text-[#19c19e]">/</span>&nbsp;Controle de Estoque
+          </p>
+
+          {/* Botão voltar para a landing */}
+          <button
+            onClick={() => setTela("landing")}
+            className="font-dm text-sm font-semibold text-[#1a2e25] border-2 border-[#1a2e25]
+                       px-5 py-2 rounded-full cursor-pointer transition-all
+                       hover:bg-[#1a2e25] hover:text-white"
+          >
+            ← Voltar ao site
+          </button>
+        </nav>
+
+        {/* Espaço para compensar a nav fixa */}
+        <div className="pt-[72px]">
+          <ControleEstoque />
+        </div>
+      </>
+    );
+  }
+
+  // ── Landing Page (código original, sem nenhuma alteração de layout) ──────────
   return (
     <div className="font-serif bg-[#f8f9f5] overflow-x-hidden" style={{ fontFamily: "'Lora', Georgia, serif" }}>
       <style>{GLOBAL_STYLES}</style>
@@ -255,22 +312,20 @@ export default function Home() {
                       px-6 md:px-16 py-4 bg-[rgba(248,249,245,0.92)] backdrop-blur-md
                       border-b border-emerald-200/30">
         <a href="#" className="flex items-center gap-3 no-underline">
-{/* logo */}
-          <img 
-            src="src/assets/images/aperto-de-mao-do-coracao.png" 
-            alt="Doações" 
-            className="w-8 h-8 object-contain" 
+          <img
+            src="src/assets/images/aperto-de-mao-do-coracao.png"
+            alt="Doações"
+            className="w-8 h-8 object-contain"
           />
-
           <div>
             <p className="font-lora font-bold text-[1.1rem] leading-tight">
-                  <span className="text-[#1a2e25]">Ong</span>
-                  <span className="text-[#19c19e]">Conecta</span>
+              <span className="text-[#1a2e25]">Ong</span>
+              <span className="text-[#19c19e]">Conecta</span>
             </p>
             <p className="font-dm text-[0.65rem] text-[#6b8c7d] tracking-widest uppercase">Gestão de doações</p>
           </div>
         </a>
-{/* logo */}
+
         <ul className="hidden md:flex gap-10 list-none">
           {NAV_LINKS.map(({ label, anchor }) => (
             <li key={anchor}>
@@ -282,33 +337,34 @@ export default function Home() {
           ))}
         </ul>
 
-        <a href="#solucao"
-           className="font-dm text-sm font-semibold text-white px-6 py-2.5 rounded-full no-underline transition-all hover:-translate-y-0.5"
-           style={{ background: GRADIENT_PRIMARY, boxShadow: SHADOW_GREEN }}>
+        {/* MUDANÇA: "Acessar sistema" agora navega para o estoque */}
+        <button
+          onClick={() => setTela("estoque")}
+          className="font-dm text-sm font-semibold text-white px-6 py-2.5 rounded-full
+                     border-none cursor-pointer transition-all hover:-translate-y-0.5"
+          style={{ background: GRADIENT_PRIMARY, boxShadow: SHADOW_GREEN }}
+        >
           Acessar sistema
-        </a>
+        </button>
       </nav>
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <section id="hero" className="min-h-screen grid grid-cols-1 md:grid-cols-2 items-center
                                     px-6 md:px-16 pt-28 pb-16 relative overflow-hidden">
-
-        {/* Texto principal */}
         <div className="relative z-10 max-w-xl">
           <div className="hero-badge inline-flex items-center gap-2 bg-emerald-100/50 border border-emerald-300/50 text-[#2d4a3e] font-dm text-xs font-semibold tracking-widest uppercase
                           px-4 py-1.5 rounded-full mb-7">
             <span>
-              <img 
-            src="src/assets/images/aperto-de-mao-do-coracao.png" 
-            alt="Doações" 
-            className="w-8 h-8 object-contain" 
-          />
-
+              <img
+                src="src/assets/images/aperto-de-mao-do-coracao.png"
+                alt="Doações"
+                className="w-8 h-8 object-contain"
+              />
             </span>
             <span>OngConecta — Manaus, AM</span>
           </div>
-          
-          <div>  
+
+          <div>
             <h1 className="hero-title-anim font-lora font-bold text-[#1a2e25] leading-[1.18] mb-5"
                 style={{ fontSize: "clamp(2.4rem, 4vw, 3.6rem)" }}>
               Cada doação,<br />
@@ -333,11 +389,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Visual com cartões de métricas flutuantes */}
         <div className="hero-visual-anim relative z-10 hidden md:flex justify-end">
           <div className="relative w-[420px] h-[460px]">
-
-            {/* Cartão principal: estoque com barra de progresso animada */}
             <div className="absolute w-[280px] top-0 left-[50px] bg-white rounded-2xl p-5
                             border border-emerald-200/50 shadow-[0_10px_40px_rgba(26,46,37,0.1)]
                             hover:-translate-y-1.5 transition-transform">
@@ -353,13 +406,11 @@ export default function Home() {
               <p className="font-dm text-xs text-[#6b8c7d] mt-1.5">73% da meta mensal atingida</p>
             </div>
 
-            {/* Cartão secundário: entregas do dia */}
             <HeroFloatCard
               label="Entregas hoje" value="24" sub="kits distribuídos"
               className="w-[200px] bottom-5 right-0 bg-white rotate-3 border border-emerald-100/50 text-[#1a2e25]"
             />
 
-            {/* Cartão de alerta: itens próximos do vencimento */}
             <HeroFloatCard
               label="Alerta" value="12" sub="itens a vencer"
               className="w-[160px] bottom-10 left-0 -rotate-[4deg] text-white"
@@ -414,7 +465,6 @@ export default function Home() {
                style={{ background: "linear-gradient(160deg, #1a2e25 0%, #2d4a3e 100%)" }}>
         <div className="max-w-6xl mx-auto">
           <div id="solution" data-animate className={`${fadeIn("solution")} text-center mb-16`}>
-            {/* Tag centralizada: linha decorativa após o texto (invertida em relação às demais) */}
             <div className="inline-flex items-center gap-2 font-dm text-xs font-semibold tracking-[0.1em] uppercase text-[#19c19e] mb-4">
               A Solução
               <span className="w-6 h-0.5 bg-[#19c19e] block" />
@@ -428,10 +478,16 @@ export default function Home() {
             </p>
           </div>
 
+          {/* MUDANÇA: passa onNavigate para cada FeatureCard */}
           <div id="features" data-animate
                className={`${fadeIn("features")} grid grid-cols-1 md:grid-cols-3 gap-6`}>
             {FEATURES.map((feature, index) => (
-              <FeatureCard key={feature.title} feature={feature} delayIndex={index} />
+              <FeatureCard
+                key={feature.title}
+                feature={feature}
+                delayIndex={index}
+                onNavigate={setTela}
+              />
             ))}
           </div>
         </div>
@@ -463,7 +519,6 @@ export default function Home() {
       {/* ── CTA ──────────────────────────────────────────────────────────────── */}
       <section id="contato" className="relative overflow-hidden py-24 px-6 md:px-16 text-center"
                style={{ background: GRADIENT_PRIMARY }}>
-        {/* Círculos decorativos de fundo */}
         <div className="absolute top-[-60px] right-[-60px] w-[300px] h-[300px] rounded-full bg-white/[0.08]" />
         <div className="absolute bottom-[-80px] left-[-40px] w-[250px] h-[250px] rounded-full bg-white/[0.06]" />
 
@@ -495,10 +550,7 @@ export default function Home() {
       <footer className="bg-[#1a2e25] px-6 md:px-16 py-12
                          flex flex-col md:flex-row items-center justify-between gap-6 flex-wrap">
         <p className="font-lora font-bold text-base text-white">
-          
-          🤲
-          
-           Ong <span className="text-emerald-300">Conecta</span>
+          🤲 Ong <span className="text-emerald-300">Conecta</span>
         </p>
         <p className="font-dm text-xs text-white/35 text-center leading-relaxed">
           © 2026 OngConecta · Manaus, Amazonas<br />

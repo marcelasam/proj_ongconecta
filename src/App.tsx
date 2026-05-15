@@ -1,11 +1,16 @@
 import { useState, useEffect } from "react";
 import ControleEstoque from "./components/ControleEstoque";
+import RegistroDoacoes from "./components/RegistroDoacoes";
+import MontagemKits from "./components/MontagemKits";
+import RegistroEntregas from "./components/RegistroEntregas";
+import DashboardsSimples from "./components/DashboardsSimples";
+import FuncionaOffline from "./components/FuncionaOffline";
 
 // ─── Tipagem ───────────────────────────────────────────────────────────────────
 
 type Priority = "Alta" | "Média";
 // NOVO: tipo para controlar qual tela está ativa
-type Tela = "landing" | "estoque";
+type Tela = "landing" | "doacoes" | "estoque" | "kits" | "entregas" | "dashboards" | "offline";
 
 interface Stat       { value: string; label: string }
 interface Feature    { icon: string;  title: string; desc: string; rota?: Tela }
@@ -21,14 +26,13 @@ const STATS: Stat[] = [
   { value: "R$2M+",  label: "Recursos mobilizados"  },
 ];
 
-// MUDANÇA: adicionado `rota: "estoque"` apenas no card de Controle de Estoque
 const FEATURES: Feature[] = [
-  { icon: "📥", title: "Registro de Doações",      desc: "Cadastre lotes de empresas e doações individuais com rastreabilidade completa de origem e data." },
+  { icon: "📥", title: "Registro de Doações",      desc: "Cadastre lotes de empresas e doações individuais com rastreabilidade completa de origem e data.", rota: "doacoes" },
   { icon: "📦", title: "Controle de Estoque",       desc: "Gestão por lotes com data de validade, alertas automáticos e rotação FIFO para alimentos.", rota: "estoque" },
-  { icon: "🎁", title: "Montagem de Kits",          desc: "Monte cestas e kits com fluxo de aprovação, garantindo padronização e controle de saídas." },
-  { icon: "🚚", title: "Registro de Entregas",      desc: "Histórico completo por família com critérios de priorização e rastreabilidade de cada kit entregue." },
-  { icon: "📊", title: "Dashboards Simples",        desc: "Visão geral do estoque, entregas e famílias atendidas. Exportação para relatórios de parceiros." },
-  { icon: "🔒", title: "Funciona Offline",          desc: "Projetado para internet instável. Sincroniza dados quando a conexão é restabelecida." },
+  { icon: "🎁", title: "Montagem de Kits",          desc: "Monte cestas e kits com fluxo de aprovação, garantindo padronização e controle de saídas.", rota: "kits" },
+  { icon: "🚚", title: "Registro de Entregas",      desc: "Histórico completo por família com critérios de priorização e rastreabilidade de cada kit entregue.", rota: "entregas" },
+  { icon: "📊", title: "Dashboards Simples",        desc: "Visão geral do estoque, entregas e famílias atendidas. Exportação para relatórios de parceiros.", rota: "dashboards" },
+  { icon: "🔒", title: "Funciona Offline",          desc: "Projetado para internet instável. Sincroniza dados quando a conexão é restabelecida.", rota: "offline" },
 ];
 
 const PROBLEMS: Problem[] = [
@@ -65,6 +69,30 @@ const BTN_OUTLINE_DARK_CLS =
   "font-dm text-sm font-semibold text-[#1a2e25] border-2 border-[#1a2e25] px-7 py-3 rounded-full no-underline transition-all hover:bg-[#1a2e25] hover:text-white hover:-translate-y-0.5";
 
 const SECTION_TITLE_STYLE = { fontSize: "clamp(1.8rem, 2.5vw, 2.6rem)" };
+
+const ROUTE_BY_TELA: Record<Tela, string> = {
+  landing: "/",
+  doacoes: "/doacoes",
+  estoque: "/estoque",
+  kits: "/kits",
+  entregas: "/entregas",
+  dashboards: "/dashboards",
+  offline: "/offline",
+};
+
+const MODULE_LABEL_BY_TELA: Record<Exclude<Tela, "landing">, string> = {
+  doacoes: "Registro de Doacoes",
+  estoque: "Controle de Estoque",
+  kits: "Montagem de Kits",
+  entregas: "Registro de Entregas",
+  dashboards: "Dashboards Simples",
+  offline: "Funciona Offline",
+};
+
+function telaFromPath(pathname: string): Tela {
+  const entry = Object.entries(ROUTE_BY_TELA).find(([, route]) => route === pathname);
+  return (entry?.[0] as Tela | undefined) ?? "landing";
+}
 
 // ─── Subcomponentes ────────────────────────────────────────────────────────────
 
@@ -225,14 +253,27 @@ const GLOBAL_STYLES = `
 // ─── Componente principal ──────────────────────────────────────────────────────
 
 export default function Home() {
-  // NOVO: estado que controla qual tela exibir
-  const [tela, setTela] = useState<Tela>("landing");
+  const [tela, setTela] = useState<Tela>(() => telaFromPath(window.location.pathname));
   const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set());
+
+  function navegarPara(novaTela: Tela) {
+    const rota = ROUTE_BY_TELA[novaTela];
+    if (window.location.pathname !== rota) {
+      window.history.pushState({ tela: novaTela }, "", rota);
+    }
+    setTela(novaTela);
+  }
 
   // Rola para o topo sempre que trocar de tela
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [tela]);
+
+  useEffect(() => {
+    const handlePopState = () => setTela(telaFromPath(window.location.pathname));
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -254,7 +295,9 @@ export default function Home() {
     `fade-up ${visibleSections.has(sectionId) ? "visible" : ""}`;
 
   // ── Se a tela ativa for "estoque", renderiza o módulo com nav própria ────────
-  if (tela === "estoque") {
+  if (tela !== "landing") {
+    const labelModulo = MODULE_LABEL_BY_TELA[tela];
+
     return (
       <>
         <style>{GLOBAL_STYLES}</style>
@@ -263,7 +306,14 @@ export default function Home() {
         <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between
                         px-6 md:px-16 py-4 bg-[rgba(248,249,245,0.95)] backdrop-blur-md
                         border-b border-emerald-200/30">
-          <a href="#" className="flex items-center gap-3 no-underline" onClick={() => setTela("landing")}>
+          <a
+            href="/"
+            className="flex items-center gap-3 no-underline"
+            onClick={(event) => {
+              event.preventDefault();
+              navegarPara("landing");
+            }}
+          >
             <img
               src="src/assets/images/aperto-de-mao-do-coracao.png"
               alt="Doações"
@@ -280,12 +330,12 @@ export default function Home() {
 
           {/* Breadcrumb simples */}
           <p className="font-dm text-sm text-[#6b8c7d] hidden md:block">
-            Sistema&nbsp;<span className="text-[#19c19e]">/</span>&nbsp;Controle de Estoque
+            Sistema&nbsp;<span className="text-[#19c19e]">/</span>&nbsp;{labelModulo}
           </p>
 
           {/* Botão voltar para a landing */}
           <button
-            onClick={() => setTela("landing")}
+            onClick={() => window.history.back()}
             className="font-dm text-sm font-semibold text-[#1a2e25] border-2 border-[#1a2e25]
                        px-5 py-2 rounded-full cursor-pointer transition-all
                        hover:bg-[#1a2e25] hover:text-white"
@@ -296,7 +346,12 @@ export default function Home() {
 
         {/* Espaço para compensar a nav fixa */}
         <div className="pt-[72px]">
-          <ControleEstoque />
+          {tela === "doacoes" && <RegistroDoacoes />}
+          {tela === "estoque" && <ControleEstoque />}
+          {tela === "kits" && <MontagemKits />}
+          {tela === "entregas" && <RegistroEntregas />}
+          {tela === "dashboards" && <DashboardsSimples />}
+          {tela === "offline" && <FuncionaOffline />}
         </div>
       </>
     );
@@ -339,7 +394,7 @@ export default function Home() {
 
         {/* MUDANÇA: "Acessar sistema" agora navega para o estoque */}
         <button
-          onClick={() => setTela("estoque")}
+          onClick={() => navegarPara("estoque")}
           className="font-dm text-sm font-semibold text-white px-6 py-2.5 rounded-full
                      border-none cursor-pointer transition-all hover:-translate-y-0.5"
           style={{ background: GRADIENT_PRIMARY, boxShadow: SHADOW_GREEN }}
@@ -398,7 +453,7 @@ export default function Home() {
                 Estoque atual
               </p>
               <p className="font-lora text-[1.8rem] font-bold text-[#1a2e25] leading-tight">1.847</p>
-              <p className="font-dm text-sm text-[#6b8c7d] mt-1">itens cadastrados</p>
+              <p className="font-dm text-sm text-[#6b8c7d] mt-1">Itens cadastrados</p>
               <div className="mt-3 h-1.5 bg-emerald-100 rounded-full overflow-hidden">
                 <div className="progress-fill h-full rounded-full"
                      style={{ background: "linear-gradient(90deg, #19c19e, #69e3a9)" }} />
@@ -486,7 +541,7 @@ export default function Home() {
                 key={feature.title}
                 feature={feature}
                 delayIndex={index}
-                onNavigate={setTela}
+                onNavigate={navegarPara}
               />
             ))}
           </div>
@@ -550,7 +605,12 @@ export default function Home() {
       <footer className="bg-[#1a2e25] px-6 md:px-16 py-12
                          flex flex-col md:flex-row items-center justify-between gap-6 flex-wrap">
         <p className="font-lora font-bold text-base text-white">
-          🤲 Ong <span className="text-emerald-300">Conecta</span>
+           <img
+              src="src/assets/images/aperto-de-mao-do-coracao.png"
+              alt="Doações"
+              className="w-8 h-8 object-contain"
+            />
+             Ong <span className="text-emerald-300">Conecta</span>
         </p>
         <p className="font-dm text-xs text-white/35 text-center leading-relaxed">
           © 2026 OngConecta · Manaus, Amazonas<br />
